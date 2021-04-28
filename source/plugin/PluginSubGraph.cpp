@@ -4,6 +4,7 @@
 #include "core/TensorUtils.hpp"
 #include "plugin/executor.h"
 #include <dlfcn.h>
+#include <fstream> 
 
 MNN_PUBLIC int _intSubGraph = 10; // Just for linking successfully.
 
@@ -89,11 +90,11 @@ bool SubGraph::compute(InferShapeContext* ctx) {
 
 namespace backend {
 class SubGraph : public CPUComputeKernel {
-public:
+  private:
     Executor* net_executor_;
     vector<shared_ptr<HiTensor>> input_vec_;
     vector<shared_ptr<HiTensor>> output_vec_;
-
+  public:
     bool init(CPUKernelContext*) override;
     bool compute(CPUKernelContext* ctx) override;
 };
@@ -152,8 +153,8 @@ bool connetion_input_to_hitensor(CPUKernelContext* ctx,
         in_tensor->index       = index;
         in_tensor->data        = inputs[index];
         assert(type == "float");//目前只支持float的tensor
-        in_tensor->data_type   = HI_ACL_FLOAT;  
-        if (format == "HCHW") 
+        in_tensor->data_type   = HI_ACL_FLOAT;
+        if (format == "NCHW") 
         {
             in_tensor->data_format = HI_ACL_FORMAT_NCHW;
             in_tensor->n  = atoi(c[0].c_str());
@@ -199,7 +200,7 @@ bool connetion_input_to_hitensor(CPUKernelContext* ctx,
         out_tensor->data        = outputs[index];
         assert(type == "float");//目前只支持float的tensor
         out_tensor->data_type   = HI_ACL_FLOAT;  
-        if (format == "HCHW") 
+        if (format == "NCHW") 
         {
             out_tensor->data_format = HI_ACL_FORMAT_NCHW;
             out_tensor->n  = atoi(c[0].c_str());
@@ -228,7 +229,22 @@ bool SubGraph::init(CPUKernelContext* ctx) {
     if (ctx->hasAttr("conf_file")) {
         conf_file  = ctx->getAttr("conf_file")->s()->str();
     }
-
+    conf_file = conf_file + ".conf";
+    ifstream in(conf_file);  
+    string line; 
+    if(in) // 有该文件  
+    {  
+        cout << "Load config..." << endl;
+        while (getline(in, line)) // line中不包括每行的换行符  
+        {   
+            cout << line << endl;  
+        }  
+    }  
+    else // 没有该文件  
+    {  
+        cout <<"Error no config file:" <<  conf_file << endl;  
+    }  
+/*
     std::string exe_lib_file, npu_model_file;
     //从配置文件中获取npu执行lib的路径
     void *handle = dlopen(exe_lib_file.c_str(), RTLD_LAZY);
@@ -254,7 +270,7 @@ bool SubGraph::init(CPUKernelContext* ctx) {
         debug_print("Failed to init net_executor_\r\n");
         return false;
     }
-
+*/
     connetion_input_to_hitensor(ctx, input_vec_, output_vec_);//MNN上下文的IO与net_executor的IO对应起来
 
     return true;
