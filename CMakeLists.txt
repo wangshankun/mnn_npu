@@ -68,7 +68,7 @@ option(MNN_SEP_BUILD "Build MNN Backends and expression seperately. Only works w
 option(NATIVE_LIBRARY_OUTPUT "Native Library Path" OFF)
 option(NATIVE_INCLUDE_OUTPUT "Native Include Path" OFF)
 option(MNN_AAPL_FMWK "Build MNN.framework instead of traditional .a/.dylib" OFF)
-option(MNN_WITH_PLUGIN "Build with plugin op support." OFF)
+option(MNN_WITH_PLUGIN "Build with plugin op support." ON)
 option(MNN_BUILD_MINI "Build MNN-MINI that just supports fixed shape models." OFF)
 option(MNN_USE_SSE "Use SSE optimization for x86 if possiable" ON)
 option(MNN_BUILD_CODEGEN "Build with codegen" OFF)
