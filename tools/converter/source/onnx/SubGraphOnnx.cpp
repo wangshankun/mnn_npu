@@ -24,24 +24,31 @@ void SubGraphOnnx::run(MNN::OpT *dstOp, const onnx::NodeProto *onnxNode,
                       std::vector<const onnx::TensorProto *> initializers) {
     MNN::PluginT* plugin_param = new MNN::PluginT;
     plugin_param->type    = "SubGraph";
-    plugin_param->attr.resize(5);
-    //加载的file 默认就是子图name，执行时候放到mnn默认路径下
-    plugin_param->attr[0].reset(new MNN::AttributeT);
-    plugin_param->attr[0]->key = "conf_file";
-    plugin_param->attr[0]->s   = onnxNode->name();
+    plugin_param->attr.resize(6);
     //SubGraph子图类型插件，数输出不固定，没有计算公式，只能从onnx本身属性中获取
     for (int i = 0; i < onnxNode->attribute_size(); ++i) {
         const auto& attributeProto = onnxNode->attribute(i);
         const auto& attributeName  = attributeProto.name();
-        if (attributeName == "inputs_info") {
+        //执行时候放到mnn默认路径下，或者导入环境变量告诉MNN
+        if (attributeName == "lib_path") {
+            plugin_param->attr[0].reset(new MNN::AttributeT);
+            plugin_param->attr[0]->key = "lib_path";
+            plugin_param->attr[0]->s   = attributeProto.s();
+        }
+        if (attributeName == "model_file") {
             plugin_param->attr[1].reset(new MNN::AttributeT);
-            plugin_param->attr[1]->key = "inputs_info";
+            plugin_param->attr[1]->key = "model_file";
             plugin_param->attr[1]->s   = attributeProto.s();
         }
-        if (attributeName == "outputs_info") {
+        if (attributeName == "inputs_info") {
             plugin_param->attr[2].reset(new MNN::AttributeT);
-            plugin_param->attr[2]->key = "outputs_info";
+            plugin_param->attr[2]->key = "inputs_info";
             plugin_param->attr[2]->s   = attributeProto.s();
+        }
+        if (attributeName == "outputs_info") {
+            plugin_param->attr[3].reset(new MNN::AttributeT);
+            plugin_param->attr[3]->key = "outputs_info";
+            plugin_param->attr[3]->s   = attributeProto.s();
         }
     }
 
@@ -51,18 +58,18 @@ void SubGraphOnnx::run(MNN::OpT *dstOp, const onnx::NodeProto *onnxNode,
     {
         istr_maps << onnxNode->input(i) << ":" << i << ";";
     }
-    plugin_param->attr[3].reset(new MNN::AttributeT);
-    plugin_param->attr[3]->key = "input_index_map";
-    plugin_param->attr[3]->s   = istr_maps.str();
+    plugin_param->attr[4].reset(new MNN::AttributeT);
+    plugin_param->attr[4]->key = "input_index_map";
+    plugin_param->attr[4]->s   = istr_maps.str();
 
     std::ostringstream ostr_maps;
     for(int i = 0; i < onnxNode->output_size(); i++)
     {
         ostr_maps << onnxNode->output(i) << ":" << i << ";";
     }
-    plugin_param->attr[4].reset(new MNN::AttributeT);
-    plugin_param->attr[4]->key = "output_index_map";
-    plugin_param->attr[4]->s   = ostr_maps.str();
+    plugin_param->attr[5].reset(new MNN::AttributeT);
+    plugin_param->attr[5]->key = "output_index_map";
+    plugin_param->attr[5]->s   = ostr_maps.str();
 
     dstOp->type = MNN::OpType_Plugin;
     dstOp->main.type  = MNN::OpParameter_Plugin;

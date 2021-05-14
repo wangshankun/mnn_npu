@@ -4,6 +4,9 @@
 #include "core/TensorUtils.hpp"
 #include "plugin/executor.h"
 #include <dlfcn.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <fstream> 
 
 MNN_PUBLIC int _intSubGraph = 10; // Just for linking successfully.
@@ -225,27 +228,30 @@ bool connetion_input_to_hitensor(CPUKernelContext* ctx,
     return true;
 }
 bool SubGraph::init(CPUKernelContext* ctx) {
-    std::string conf_file;
-    if (ctx->hasAttr("conf_file")) {
-        conf_file  = ctx->getAttr("conf_file")->s()->str();
+    //cout <<"SubGraph Init" << endl;
+    std::string xpu_exe_path;
+    char* exe_path = getenv("XPU_EXE_PATH");
+    if(exe_path != NULL) {
+        xpu_exe_path = exe_path;
     }
-    conf_file = conf_file + ".conf";
-    ifstream in(conf_file);  
-    string line; 
-    if(in) // 有该文件  
-    {  
-        cout << "Load config..." << endl;
-        while (getline(in, line)) // line中不包括每行的换行符  
-        {   
-            cout << line << endl;  
-        }  
-    }  
-    else // 没有该文件  
-    {  
-        cout <<"Error no config file:" <<  conf_file << endl;  
-    }  
-/*
+    else
+    {
+        debug_print("error: Can't get env info XPU_EXE_PATH %s \r\n", dlerror());
+        return false;
+    }
+
     std::string exe_lib_file, npu_model_file;
+    if (ctx->hasAttr("lib_path")) {
+        exe_lib_file  = xpu_exe_path + "/" + ctx->getAttr("lib_path")->s()->str();
+    }
+    if (ctx->hasAttr("model_file")) {
+        npu_model_file  = xpu_exe_path + "/" + ctx->getAttr("model_file")->s()->str();
+    }
+
+    if(access(exe_lib_file.c_str(), F_OK) !=0 || access(npu_model_file.c_str(), F_OK) !=0) {
+        debug_print("error: lib or model not exit %s \r\n", dlerror());
+        return false;
+    }
     //从配置文件中获取npu执行lib的路径
     void *handle = dlopen(exe_lib_file.c_str(), RTLD_LAZY);
     if(handle == NULL)
@@ -270,13 +276,13 @@ bool SubGraph::init(CPUKernelContext* ctx) {
         debug_print("Failed to init net_executor_\r\n");
         return false;
     }
-*/
     connetion_input_to_hitensor(ctx, input_vec_, output_vec_);//MNN上下文的IO与net_executor的IO对应起来
 
     return true;
 }
 
 bool SubGraph::compute(CPUKernelContext* ctx) {
+    //cout <<"SubGraph Exec" << endl;
     net_executor_->Exec(input_vec_, output_vec_);
     return true;
 }
